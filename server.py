@@ -57,7 +57,6 @@ class CookieParseError(Exception):
         return repr(self.value)
 
 
-
 class Server(object):
     key = "140b41b22a29beb4061bda66b6747e14"
     cryptmaster = AESCipher(key)
