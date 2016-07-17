@@ -57,7 +57,6 @@ class CookieParseError(Exception):
         return repr(self.value)
 
 
-
 class Server(object):
     key = "140b41b22a29beb4061bda66b6747e14"
     cryptmaster = AESCipher(key)
@@ -160,7 +159,7 @@ if __name__ == '__main__':
             'tools.staticdir.dir': './public'
         }
     }
-    cherrypy.config.update({'server.socket_host': '127.0.0.1',
+    cherrypy.config.update({'server.socket_host': '0.0.0.0',
                                                   'server.socket_port': 8080, 'engine.autoreload_on': False
     })
     cherrypy.quickstart(Server(), '/', conf)
