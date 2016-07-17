@@ -5,7 +5,8 @@ from AESCipher import AESCipher
 import os
 import sqlite3
 import ipaddress
-from  binascii import unhexlify
+from binascii import unhexlify
+import traceback
 
 DB_STRING = "my.db"
 
@@ -57,19 +58,31 @@ def ip2bytes(ip4str):
     return hex_ip
 
 
+class CookieParseError(Exception):
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value)
+
+
+
 class Server(object):
     key = "140b41b22a29beb4061bda66b6747e14"
     cryptmaster = AESCipher(key)
 
     def decrypt_cookie(self, enc_cookie):
-        plaintext = self.cryptmaster.decrypt(enc_cookie)
-        if not plaintext:
-            return False, None, None
-        ip = '.'.join(str(plaintext[i]) for i in range(4))
-        cookie = str(plaintext[16:])[2:-1]
-        user = cookie.split('|')[0]
-        password = cookie.split('|')[1]
-        return ip, user, password
+        try:
+            plaintext = self.cryptmaster.decrypt(enc_cookie)
+            if plaintext == False:
+                return False, None, None
+            ip = '.'.join(str(plaintext[i]) for i in range(4))
+            cookie = str(plaintext[16:])[2:-1]
+            user = cookie.split('|')[0]
+            password = cookie.split('|')[1]
+            return ip, user, password
+        except:
+            raise CookieParseError("Cannot parse cookie!")
 
     def encrypt_cookie(self, ip, user, password):
         ip = ip2bytes(ip)
@@ -82,16 +95,20 @@ class Server(object):
     def index(self):
         try:
             cookie = cherrypy.request.cookie
-            print(str(cookie['topsecret'].value))
             ip, user, password = self.decrypt_cookie(cookie['topsecret'].value[2:-1])
-            if not ip:
+            if ip == False:
                 return "incorrect padding"
             print("The creds are: ip - " + ip + " - user - " + user + " - pass - " + password)
+            if ip != cherrypy.request.remote.ip:
+                print("incorrect ip: " + cherrypy.request.remote.ip + " instead of: " + ip)
+                return "incorrect username/password"
             if check_cookie_credentials(user, password, ip):
                 return "login successful"
             return "incorrect username/password"
+        except CookieParseError as e:
+            return e.value
         except Exception as e:
-            print(str(e))
+            traceback.print_exc()
             return open("form.html")
 
     @cherrypy.expose
@@ -128,6 +145,9 @@ class Server(object):
     ip = "127.134.64.2"
     user = "shalev"
     password = "123456"
+    rip, ruser, rpass = s.decrypt_cookie("d84874dbc3c92ac242243f8d01d5cb54c1b21abb5daa4b98b318ec2c7b857e26ebafbf1cfe13a764109c0de6c9ebb7a8")
+    print("ip: " + rip + "\nuser: " + ruser + "\npass: " + rpass)
+
     e = s.encrypt_cookie(ip, user, password)
     print(e)
     rip,ruser,rpass = s.decrypt_cookie(e)
@@ -135,6 +155,7 @@ class Server(object):
 
 
 if __name__ == '__main__':
+
     if None:
         print("in")
     else:
@@ -149,6 +170,6 @@ if __name__ == '__main__':
         }
     }
     cherrypy.config.update({'server.socket_host': '127.0.0.1',
-                                                  'server.socket_port': 8080,
+                                                  'server.socket_port': 8080, 'engine.autoreload_on': False
     })
     cherrypy.quickstart(Server(), '/', conf)
