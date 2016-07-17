@@ -39,15 +39,6 @@ def check_cookie_credentials(user, password, ip):
         return result
 
 
-def setup_database():
-    """
-    Create the `users` table in the database
-    when setting up the host machine
-    """
-    with sqlite3.connect(DB_STRING) as con:
-        con.execute("CREATE TABLE users (user, password, ip)")
-
-
 def ip2bytes(ip4str):
     """
     Convert an ip string ('127.0.0.1') to a 128-bit block of bytes
